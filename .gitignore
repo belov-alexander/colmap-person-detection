@@ -1,0 +1,136 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Model weights (large files)
+weights/*.pth
+weights/*.pt
+weights/*.ckpt
+*.pth
+*.pt
+*.ckpt
+
+# Keep the weights directory but ignore its contents
+!weights/.gitkeep
+
+# Input/Output directories
+input/*
+output/*
+masks/*
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# GroundingDINO specific
+groundingdino/__pycache__/
+groundingdino/**/__pycache__/
+
+# PyTorch
+*.pth.tar
+
+# CUDA
+*.cu.o
+*.cubin
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.dll
+*.dylib
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini

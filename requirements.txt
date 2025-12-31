@@ -1,0 +1,21 @@
+# requirements.txt
+
+numpy
+opencv-python
+Pillow
+
+torch
+torchvision
+
+
+transformers
+timm
+addict
+yapf
+
+supervision
+
+pycocotools
+
+
+groundingdino-py

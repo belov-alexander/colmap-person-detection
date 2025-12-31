@@ -1,0 +1,12 @@
+# AI Project Instructions
+
+## Environment
+
+- **Path:** All dependencies are in `.venv`.
+- **Execution:** Always prepend commands with `source .venv/bin/activate` or use the direct path `./.venv/bin/python`.
+- **Tooling:** Use `uv` for package management if available.
+
+## Coding Style
+
+- Use Type Hints for all functions.
+- Write docstrings in Google format.
