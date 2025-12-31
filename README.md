@@ -86,7 +86,7 @@ This will:
 To also blur license plates on the output images:
 
 ```bash
-python colmap-person-detection.py -carplateblure
+python colmap-person-detection.py -c
 ```
 
 ### Custom Directories
