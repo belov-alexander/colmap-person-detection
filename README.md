@@ -222,3 +222,4 @@ This project uses the GroundingDINO model. Please refer to the [GroundingDINO re
 ## Contributing
 
 Feel free to submit issues, fork the repository, and create pull requests for any improvements.
+# colmap-person-detection
