@@ -90,7 +90,7 @@ weights/*.ckpt
 *.ckpt
 
 # Keep the weights directory but ignore its contents
-!weights/.gitkeep
+weights/*
 
 # Input/Output directories
 input/*

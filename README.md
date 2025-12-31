@@ -1,7 +1,7 @@
 
 # COLMAP Person Detection
 
-A powerful Python tool that uses the GroundingDINO model to automatically detect and censor people in images. This project is specifically designed for privacy protection in COLMAP photogrammetry workflows, 3D reconstruction, and general image anonymization tasks.
+Python tool that uses the GroundingDINO model to automatically detect and censor people in images. This project is specifically designed for privacy protection in COLMAP photogrammetry workflows, 3D reconstruction, and general image anonymization tasks.
 
 ## Overview
 
@@ -222,4 +222,5 @@ This project uses the GroundingDINO model. Please refer to the [GroundingDINO re
 ## Contributing
 
 Feel free to submit issues, fork the repository, and create pull requests for any improvements.
+
 # colmap-person-detection
