@@ -180,14 +180,6 @@ If people are not being detected:
 - Ensure images are clear and people are visible
 - Check that model weights are properly loaded
 
-### Import Errors
-
-If you get import errors:
-
-```bash
-pip install --upgrade -r requirements.txt
-```
-
 ## Project Structure
 
 ```text
