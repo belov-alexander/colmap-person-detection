@@ -9,6 +9,7 @@ This tool leverages the state-of-the-art GroundingDINO object detection model to
 
 - Detect people in images with high accuracy
 - Generate binary masks for COLMAP and other 3D reconstruction tools
+- Optionally use **Segment Anything Model (SAM)** for precise human segmentation
 - Optionally blur license plates for additional privacy protection
 - Process entire directories of images in batch mode
 
@@ -23,6 +24,7 @@ The tool creates three outputs for each processed image:
 - **Automatic Person Detection**: Uses GroundingDINO to find people in images with high accuracy
 - **Privacy Censorship**: Automatically obscures detected people with black boxes
 - **Mask Generation**: Creates binary masks compatible with COLMAP and other 3D reconstruction software
+- **Precise Segmentation**: Uses SAM to generate accurate human silhouettes instead of bounding boxes (optional)
 - **Mask Enhancement**: Loads existing masks and adds new person detections to them
 - **Optional License Plate Blurring**: Detects and blurs license plates when enabled
 - **Batch Processing**: Process entire directories of images automatically
@@ -89,6 +91,16 @@ To also blur license plates on the output images:
 python colmap-person-detection.py -c
 ```
 
+### Precise Segmentation
+
+To use SAM for accurate human segmentation (instead of rectangular boxes):
+
+```bash
+python colmap-person-detection.py -s
+```
+
+*Note: This will download SAM weights (~2.4GB) on the first run.*
+
 ### Custom Directories
 
 Specify custom input/output directories:
@@ -111,6 +123,7 @@ Available options:
 - `-o, --output`: Path to output directory (default: `output`)
 - `-m, --masks`: Path to masks directory (default: `masks`)
 - `-c, --carplateblur`: Enable license plate blurring on output images
+- `-s, --segmentation`: Use SAM for accurate human segmentation
 
 ## How It Works
 
@@ -119,7 +132,10 @@ Available options:
 3. **Mask Generation/Enhancement**:
    - If a mask already exists, it loads and enhances it with new detections
    - If no mask exists, creates a new binary mask (black=person, white=background)
-4. **Image Censoring**: Draws black rectangles over detected people in the output image
+   - If `-s` is used, generates precise segmentation masks using SAM
+4. **Image Censoring**:
+   - Default: Draws black rectangles over detected people
+   - With `-s`: Fills accurate human silhouettes with black
 5. **License Plate Detection** (optional): Detects and blurs license plates if enabled
 6. **Output Saving**: Saves both the censored image and the mask file
 
@@ -192,7 +208,8 @@ colmap-person-detection/
 │   └── config/
 │       └── GroundingDINO_SwinT_OGC.py
 ├── weights/                 # Model weights
-│   └── groundingdino_swint_ogc.pth
+│   ├── groundingdino_swint_ogc.pth
+│   └── sam_vit_h_4b8939.pth # Downloaded automatically if using -s
 ├── input/                   # Place input images here
 ├── output/                  # Censored images output
 └── masks/                   # Binary masks output
@@ -209,6 +226,7 @@ colmap-person-detection/
 - `timm` - PyTorch Image Models
 - `supervision` - Computer vision utilities
 - `groundingdino-py` - GroundingDINO model
+- `segment-anything` - Segment Anything Model (SAM)
 
 ## License
 
@@ -217,10 +235,9 @@ This project uses the GroundingDINO model. Please refer to the [GroundingDINO re
 ## Acknowledgments
 
 - [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) - Object detection model
+- [Segment Anything (SAM)](https://github.com/facebookresearch/segment-anything) - Segmentation model
 - IDEA Research - For developing the GroundingDINO model
 
 ## Contributing
 
 Feel free to submit issues, fork the repository, and create pull requests for any improvements.
-
-# colmap-person-detection

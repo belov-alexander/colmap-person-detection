@@ -19,3 +19,4 @@ pycocotools
 
 
 groundingdino-py
+git+https://github.com/facebookresearch/segment-anything.git
