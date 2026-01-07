@@ -11,7 +11,7 @@ This tool leverages the state-of-the-art GroundingDINO object detection model to
 - Generate binary masks for COLMAP and other 3D reconstruction tools
 - Generate sky masks for improved reconstruction
 - Optionally use **Segment Anything Model (SAM)** for precise human segmentation
-- Optionally blur license plates for additional privacy protection
+- Optionally **blur** or **black-fill** license plates and people
 - Process entire directories of images in batch mode
 
 The tool creates three outputs for each processed image:
@@ -23,11 +23,11 @@ The tool creates three outputs for each processed image:
 ## Features
 
 - **Automatic Person Detection**: Uses GroundingDINO to find people in images with high accuracy
-- **Privacy Censorship**: Automatically obscures detected people with black boxes
+- **Privacy Censorship**: Automatically obscures detected people with black boxes (default) or Gaussian blur
 - **Mask Generation**: Creates binary masks compatible with COLMAP and other 3D reconstruction software
 - **Precise Segmentation**: Uses SAM to generate accurate human silhouettes instead of bounding boxes (optional)
 - **Mask Enhancement**: Loads existing masks and adds new person detections to them
-- **Optional License Plate Blurring**: Detects and blurs license plates when enabled
+- **License Plate Processing**: Detects and blurs or black-fills license plates when enabled
 - **Batch Processing**: Process entire directories of images automatically
 - **Cross-Platform Support**: Works on both CPU and GPU (CUDA)
 - **Configurable Thresholds**: Adjust detection sensitivity for different use cases
@@ -83,13 +83,23 @@ This will:
 - Save processed images to the `output` directory
 - Generate binary masks in the `masks` directory
 
-### With License Plate Blurring
+### Blur Mode
 
-To also blur license plates on the output images:
+By default, the tool uses black rectangles (or silhouettes with `-s`). To use **Gaussian blur** instead:
+
+```bash
+python colmap-person-detection.py -b
+```
+
+### License Plate Anonymization
+
+To also detect and process license plates on the output images:
 
 ```bash
 python colmap-person-detection.py -c
 ```
+
+*Note: Combined with `-b`, license plates will be blurred. Without `-b`, they will be filled with black.*
 
 ### Precise Segmentation
 
@@ -132,8 +142,9 @@ Available options:
 - `-i, --input`: Path to input directory (default: `input`)
 - `-o, --output`: Path to output directory (default: `output`)
 - `-m, --masks`: Path to masks directory (default: `masks`)
-- `-c, --carplateblur`: Enable license plate blurring on output images
+- `-c, --carplate`: Enable license plate processing on output images
 - `-s, --segmentation`: Use SAM for accurate human segmentation
+- `-b, --blur`: Blur detected objects instead of filling with black
 
 ## How It Works
 
@@ -144,9 +155,10 @@ Available options:
    - If no mask exists, creates a new binary mask (black=person, white=background)
    - If `-s` is used, generates precise segmentation masks using SAM
 4. **Image Censoring**:
-   - Default: Draws black rectangles over detected people
-   - With `-s`: Fills accurate human silhouettes with black
-5. **License Plate Detection** (optional): Detects and blurs license plates if enabled
+   - **Default**: Draws black rectangles over detected people
+   - **Blur Mode (`-b`)**: Applies Gaussian blur to detected regions
+   - **With Segmentation (`-s`)**: Fills accurate human silhouettes with black (or blurs them with `-b`)
+5. **License Plate Detection** (optional): Detects and processes license plates if enabled (`-c`)
 6. **Output Saving**: Saves both the censored image and the mask file
 
 ## Configuration

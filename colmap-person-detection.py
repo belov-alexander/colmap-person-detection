@@ -180,6 +180,52 @@ def censor_image_with_masks(
     print(f"Saved censored image to: {output_path}")
 
 
+def blur_image_masks(
+    image_source: np.ndarray, 
+    masks: torch.Tensor, 
+    output_path: str,
+    expansion_pixels: int = 0
+) -> None:
+    """
+    Blurs the image in regions defined by segmentation masks and saves it.
+    Args:
+        image_source: Original image.
+        masks: Segmentation masks.
+        output_path: Output file path.
+        expansion_pixels: Number of pixels to dilate the mask by.
+    """
+    if masks is None or len(masks) == 0:
+        print("No masks to blur.")
+        cv2.imwrite(output_path, cv2.cvtColor(image_source, cv2.COLOR_RGB2BGR))
+        return
+
+    # Work with a copy of the image (convert RGB to BGR for OpenCV)
+    image_bgr = cv2.cvtColor(image_source, cv2.COLOR_RGB2BGR)
+    
+    # Create a combined mask (logical OR of all masks)
+    combined_mask = torch.any(masks, dim=0).squeeze().cpu().numpy().astype(np.uint8)
+    
+    # Dilate the mask if requested
+    if expansion_pixels > 0:
+        kernel_size = expansion_pixels * 2 + 1 
+        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        combined_mask = cv2.dilate(combined_mask, kernel, iterations=1)
+    
+    # Blur the entire image (or large enough ksize relative to image)
+    h, w = image_bgr.shape[:2]
+    ksize = max(21, int(min(h, w) * 0.05))
+    if ksize % 2 == 0: ksize += 1
+    
+    blurred_img = cv2.GaussianBlur(image_bgr, (ksize, ksize), 0)
+    
+    # Where mask is non-zero, use blurred image. Else use original.
+    mask_3d = np.repeat(combined_mask[:, :, np.newaxis], 3, axis=2)
+    final_image = np.where(mask_3d > 0, blurred_img, image_bgr)
+
+    cv2.imwrite(output_path, final_image)
+    print(f"Saved blurred image to: {output_path}")
+
+
 def create_mask(
     image_shape: Tuple[int, int, int], 
     boxes: torch.Tensor, 
@@ -312,23 +358,83 @@ def censor_image(
     print(f"Saved censored image to: {output_path}")
 
 
+def blur_image_boxes(
+    image_source: np.ndarray,
+    boxes: torch.Tensor,
+    output_path: str
+) -> None:
+    """
+    Blurs regions defined by bounding boxes on the image and saves it.
+
+    Args:
+        image_source: Original image as a NumPy array (RGB).
+        boxes: Tensor of normalized bounding boxes [cx, cy, w, h].
+        output_path: Path where the blurred image will be saved.
+    """
+    # Convert RGB image to BGR for OpenCV
+    image_bgr = cv2.cvtColor(image_source, cv2.COLOR_RGB2BGR)
+
+    if boxes is None or len(boxes) == 0:
+        print(f"No objects detected. Saving original to {output_path}")
+        cv2.imwrite(output_path, image_bgr)
+        return
+
+    h, w, _ = image_source.shape
+    
+    # Convert normalized boxes [cx, cy, w, h] to pixel coordinates
+    boxes_px = (boxes * torch.tensor([w, h, w, h])).cpu().numpy()
+
+    print(f"Found {len(boxes_px)} objects. Blurring...")
+
+    for (cx, cy, bw, bh) in boxes_px:
+        x1 = int(cx - bw / 2)
+        y1 = int(cy - bh / 2)
+        x2 = int(cx + bw / 2)
+        y2 = int(cy + bh / 2)
+
+        # Padding
+        pad = int(0.08 * max(bw, bh))
+        x1 = max(0, x1 - pad)
+        y1 = max(0, y1 - pad)
+        x2 = min(w - 1, x2 + pad)
+        y2 = min(h - 1, y2 + pad)
+
+        # Extract ROI
+        roi = image_bgr[y1:y2, x1:x2]
+        if roi.size == 0: continue
+
+        # Blur
+        ksize = max(3, int(min(bw, bh) * 0.6))  # Dynamic kernel size relative to object
+        # Make somewhat larger blur for people anonymization
+        ksize = int(ksize * 1.5)
+        if ksize % 2 == 0: ksize += 1
+        
+        blurred_roi = cv2.GaussianBlur(roi, (ksize, ksize), 0)
+        image_bgr[y1:y2, x1:x2] = blurred_roi
+
+    cv2.imwrite(output_path, image_bgr)
+    print(f"Saved blurred image to: {output_path}")
+
+
 def blur_license_plates(
     image_bgr: np.ndarray,
     model,
     image_tensor: torch.Tensor,
-    device: str
+    device: str,
+    blur: bool = True
 ) -> np.ndarray:
     """
-    Detects and blurs license plates in the image.
+    Detects and either blurs or masks (black fill) license plates in the image.
     
     Args:
         image_bgr: Image in BGR format (OpenCV format).
         model: Loaded GroundingDINO model.
         image_tensor: Preprocessed image tensor for detection.
         device: Device to run inference on ('cpu' or 'cuda').
+        blur: If True, recursively blur. If False, fill with black.
     
     Returns:
-        Image with blurred license plates.
+        Image with processed license plates.
     """
     # Detect license plates
     boxes = detect_objects(
@@ -347,17 +453,16 @@ def blur_license_plates(
     h, w, _ = image_bgr.shape
     boxes_px = (boxes * torch.tensor([w, h, w, h])).cpu().numpy()
     
-    print(f"  Found {len(boxes_px)} license plate(s). Blurring...")
+    action_str = "Blurring" if blur else "Censoring"
+    print(f"  Found {len(boxes_px)} license plate(s). {action_str}...")
     
-    # Blur each detected license plate
     for (cx, cy, bw, bh) in boxes_px:
-        # Calculate top-left (x1, y1) and bottom-right (x2, y2) coordinates
         x1 = int(cx - bw / 2)
         y1 = int(cy - bh / 2)
         x2 = int(cx + bw / 2)
         y2 = int(cy + bh / 2)
         
-        # Expand bbox by PAD_RATIO to cover frames/bolts
+        # Expand bbox
         pad_w = int(bw * PAD_RATIO)
         pad_h = int(bh * PAD_RATIO)
         x1 = max(0, x1 - pad_w)
@@ -365,17 +470,19 @@ def blur_license_plates(
         x2 = min(w - 1, x2 + pad_w)
         y2 = min(h - 1, y2 + pad_h)
         
-        # Extract the region of interest
-        roi = image_bgr[y1:y2, x1:x2]
-        
-        # Apply Gaussian blur (kernel size should be odd)
-        ksize = max(3, int(min(bw, bh) * 0.6))
-        if ksize % 2 == 0:
-            ksize += 1
-        blurred_roi = cv2.GaussianBlur(roi, (ksize, ksize), 0)
-        
-        # Replace the region with blurred version
-        image_bgr[y1:y2, x1:x2] = blurred_roi
+        if blur:
+            # ROI Blur
+            roi = image_bgr[y1:y2, x1:x2]
+            if roi.size == 0: continue
+            
+            ksize = max(3, int(min(bw, bh) * 0.6))
+            if ksize % 2 == 0: ksize += 1
+            blurred_roi = cv2.GaussianBlur(roi, (ksize, ksize), 0)
+            
+            image_bgr[y1:y2, x1:x2] = blurred_roi
+        else:
+            # Black fill
+            cv2.rectangle(image_bgr, (x1, y1), (x2, y2), (0, 0, 0), thickness=-1)
     
     return image_bgr
 
@@ -389,8 +496,9 @@ def main():
     parser.add_argument("-i", "--input", type=str, default="input", help="Path to input directory containing images")
     parser.add_argument("-o", "--output", type=str, default="output", help="Path to output directory for processed images")
     parser.add_argument("-m", "--masks", type=str, default="masks", help="Path to output directory for masks")
-    parser.add_argument("-c", "--carplateblur", action="store_true", help="Blur license plates on output images")
+    parser.add_argument("-c", "--carplate", action="store_true", help="Detect and process license plates")
     parser.add_argument("-s", "--segmentation", action="store_true", help="Use SAM for accurate human segmentation")
+    parser.add_argument("-b", "--blur", action="store_true", help="Blur detected objects instead of filling with black")
     args = parser.parse_args()
 
     input_dir = args.input
@@ -478,31 +586,50 @@ def main():
                 device
             )
             
-            # Censor and Save
+            # Censor/Blur and Save
             if args.segmentation and boxes is not None and len(boxes) > 0:
                 print(f"  Segmenting {len(boxes)} objects...")
                 masks = segment_objects(sam_predictor, image_source, boxes)
-                censor_image_with_masks(image_source, masks, output_path, expansion_pixels=MASK_EXPANSION_PIXELS)
+                
+                if args.blur:
+                    blur_image_masks(image_source, masks, output_path, expansion_pixels=MASK_EXPANSION_PIXELS)
+                else:
+                    censor_image_with_masks(image_source, masks, output_path, expansion_pixels=MASK_EXPANSION_PIXELS)
+                
                 # Create and Save Mask (using segmentation)
-                # We pass None for boxes so we don't draw the rectangles, only the fine masks
-                # Actually, the user might want both or just the fine mask. 
-                # Usually segmentation replaces box filling.
+                # The mask itself is always black/white (binary) for COLMAP, irrelevant of blur option.
                 create_mask(image_source.shape, None, mask_path, segmentation_masks=masks)
+
             else:
-                censor_image(image_source, boxes, output_path)
+                if args.blur:
+                    blur_image_boxes(image_source, boxes, output_path)
+                else:
+                    censor_image(image_source, boxes, output_path)
+                
                 # Create and Save Mask (box based)
                 create_mask(image_source.shape, boxes, mask_path)
 
-            # Blur license plates if flag is enabled
-            if args.carplateblur:
-                # Read the censored image
-                censored_bgr = cv2.imread(output_path)
-                # Reload image tensor for license plate detection
+            # Process license plates if detect flag is enabled
+            if args.carplate:
+                # Read the already processed image (censored or blurred people)
+                current_bgr = cv2.imread(output_path)
+                
+                # Reload image tensor for license plate detection 
+                # (Ideally we should reuse original tensor but the image has changed? 
+                # No, we detect on original usually, but here we want to modify the output.
+                # Actually, detecting on modified image might fail if people are detected as plates? Unlikely.
+                # But to be safe and consistent with previous logic, we explicitly reload.
+                # Wait, if we reload the *processed* image, detection might get messed up by black boxes.
+                # The previous logic reloaded the *output_path*.
+                # Let's keep that behavior, but be aware of it.
+                
                 _, image_tensor_for_plates = load_image(output_path)
-                # Apply license plate blurring
-                blurred_bgr = blur_license_plates(censored_bgr, model, image_tensor_for_plates, device)
+                
+                # Apply license plate processing (blur or black depending on args.blur)
+                processed_bgr = blur_license_plates(current_bgr, model, image_tensor_for_plates, device, blur=args.blur)
+                
                 # Save the final result
-                cv2.imwrite(output_path, blurred_bgr)
+                cv2.imwrite(output_path, processed_bgr)
             
         except Exception as e:
             print(f"Error processing {filename}: {e}")
