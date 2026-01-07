@@ -96,6 +96,7 @@ weights/*
 input/*
 output/*
 masks/*
+skymask/*
 
 # Logs
 *.log

@@ -3,6 +3,8 @@
 numpy
 opencv-python
 Pillow
+tqdm
+onnxruntime
 
 torch
 torchvision

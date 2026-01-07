@@ -9,6 +9,7 @@ This tool leverages the state-of-the-art GroundingDINO object detection model to
 
 - Detect people in images with high accuracy
 - Generate binary masks for COLMAP and other 3D reconstruction tools
+- Generate sky masks for improved reconstruction
 - Optionally use **Segment Anything Model (SAM)** for precise human segmentation
 - Optionally blur license plates for additional privacy protection
 - Process entire directories of images in batch mode
@@ -60,12 +61,11 @@ pip install -r requirements.txt
 
 ### 4. Download Model Weights
 
-Ensure you have the GroundingDINO weights and config files:
+Ensure you have the necessary model weights in the `weights/` directory:
 
-- **Config**: `groundingdino/config/GroundingDINO_SwinT_OGC.py`
-- **Weights**: `weights/groundingdino_swint_ogc.pth`
-
-You can download the weights from the [GroundingDINO repository](https://github.com/IDEA-Research/GroundingDINO).
+- **GroundingDINO**: `weights/groundingdino_swint_ogc.pth` (Download from [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO))
+- **Sky Segmentation**: `weights/skyseg.onnx` (Download from [JianyuanWang/skyseg](https://huggingface.co/JianyuanWang/skyseg))
+- **SAM**: `weights/sam_vit_h_4b8939.pth` (Downloaded automatically when using `-s`)
 
 ## Usage
 
@@ -108,6 +108,16 @@ Specify custom input/output directories:
 ```bash
 python colmap-person-detection.py -i /path/to/input -o /path/to/output -m /path/to/masks
 ```
+
+### Sky Segmentation
+
+To generate sky masks (white=ground, black=sky):
+
+```bash
+python make_sky_masks.py --images input --out skymask --model weights/skyseg.onnx --threshold 0.5 --invert
+```
+
+Note: This requires `skyseg.onnx` (automatically expected in `weights/` or specified via `--model`). The `--invert` flag ensures the sky is black (0) and ground is white (255) for COLMAP compatibility.
 
 ### All Options
 
